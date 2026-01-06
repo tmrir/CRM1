@@ -44,3 +44,19 @@ export interface Project {
   is_public?: boolean;
   public_id?: string;
 }
+
+export type AssociationStatus = 'new' | 'contacted' | 'not_contacted' | 'response_rate';
+
+export interface Association {
+  id: number;
+  name: string;
+  city: string;
+  category: string;
+  email: string;
+  phone: string;
+  website?: string;
+  status: AssociationStatus;
+  response_rate?: number;
+  trust_score?: number;
+  created_at?: string;
+}

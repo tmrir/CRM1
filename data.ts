@@ -6,7 +6,7 @@ export const initialCurrentUser: User = {
   username: '',
   email: '',
   avatar_url: '',
-  role: 'Member',
+  role: 'Admin',
 };
 
 export const initialEmployees: Employee[] = [];

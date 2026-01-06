@@ -17,9 +17,10 @@ import ProfileView from './components/ProfileView';
 import CalendarView from './components/CalendarView';
 import SystemReportView from './components/SystemReportView';
 import PublicTaskView from './components/PublicTaskView';
+import AssociationsView from './components/AssociationsView';
 import { sendNotification, hasPermission } from './utils/exportHelpers';
 
-type View = 'dashboard' | 'projects' | 'tasks' | 'team' | 'calendar' | 'reports' | 'systemReport' | 'settings' | 'profile';
+type View = 'dashboard' | 'projects' | 'tasks' | 'team' | 'calendar' | 'reports' | 'systemReport' | 'settings' | 'profile' | 'associations';
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
@@ -28,7 +29,7 @@ const App: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [loginError, setLoginError] = useState('');
-  
+
   const [publicProject, setPublicProject] = useState<Project | null>(null);
 
   const [currentUser, setCurrentUser] = useState<User>(initialCurrentUser);
@@ -68,17 +69,17 @@ const App: React.FC = () => {
       const urlParams = new URLSearchParams(window.location.search);
       const publicId = urlParams.get('publicProjectId');
       if (publicId) {
-          const { data, error } = await supabase.from('projects').select().eq('public_id', publicId).eq('is_public', true).single();
-          if (data) {
-              setPublicProject(data);
-              const { data: tasksData } = await supabase.from('tasks').select('*').eq('project_id', data.id);
-              if (tasksData) setTasks(tasksData);
-              const { data: employeesData } = await supabase.from('employees').select('*');
-              if (employeesData) setEmployees(employeesData);
-          }
+        const { data, error } = await supabase.from('projects').select().eq('public_id', publicId).eq('is_public', true).single();
+        if (data) {
+          setPublicProject(data);
+          const { data: tasksData } = await supabase.from('tasks').select('*').eq('project_id', data.id);
+          if (tasksData) setTasks(tasksData);
+          const { data: employeesData } = await supabase.from('employees').select('*');
+          if (employeesData) setEmployees(employeesData);
+        }
       }
     };
-    
+
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) {
@@ -106,22 +107,22 @@ const App: React.FC = () => {
   useEffect(() => {
     // Notification logic remains largely the same, just field names updated
     const checkTasksForNotifications = () => {
-        if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-        const now = new Date();
-        const fifteenMinutesFromNow = new Date(now.getTime() + 15 * 60 * 1000);
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+      const now = new Date();
+      const fifteenMinutesFromNow = new Date(now.getTime() + 15 * 60 * 1000);
 
-        tasks.forEach(task => {
-            if (notifiedTaskIds.includes(task.id) || !task.due_date) return;
-            try {
-                const dueDateTimeString = task.due_time ? `${task.due_date}T${task.due_time}` : `${task.due_date}T23:59:59`;
-                const dueDateTime = new Date(dueDateTimeString);
-                if (dueDateTime < now && task.status !== 'done') {
-                    // ... notification logic for overdue
-                } else if (task.due_time && task.status !== 'done' && dueDateTime > now && dueDateTime <= fifteenMinutesFromNow) {
-                    // ... notification logic for upcoming
-                }
-            } catch (error) { /* Silently fail */ }
-        });
+      tasks.forEach(task => {
+        if (notifiedTaskIds.includes(task.id) || !task.due_date) return;
+        try {
+          const dueDateTimeString = task.due_time ? `${task.due_date}T${task.due_time}` : `${task.due_date}T23:59:59`;
+          const dueDateTime = new Date(dueDateTimeString);
+          if (dueDateTime < now && task.status !== 'done') {
+            // ... notification logic for overdue
+          } else if (task.due_time && task.status !== 'done' && dueDateTime > now && dueDateTime <= fifteenMinutesFromNow) {
+            // ... notification logic for upcoming
+          }
+        } catch (error) { /* Silently fail */ }
+      });
     };
     const intervalId = setInterval(checkTasksForNotifications, 60000);
     return () => clearInterval(intervalId);
@@ -135,52 +136,52 @@ const App: React.FC = () => {
   };
 
   const updateProjectsProgress = (currentTasks: Task[], currentProjects: Project[]) => {
-      const updatedProjects = currentProjects.map(proj => ({ ...proj, progress: recalculateProjectProgress(proj.id, currentTasks) }));
-      setProjects(updatedProjects);
+    const updatedProjects = currentProjects.map(proj => ({ ...proj, progress: recalculateProjectProgress(proj.id, currentTasks) }));
+    setProjects(updatedProjects);
   };
-  
+
   const handleLogin = async (identifier: string, password: string) => {
     setLoginError('');
     const trimmedIdentifier = identifier.trim();
     let emailToLogin: string;
 
     try {
-        if (!trimmedIdentifier.includes('@')) {
-            // It's a username, fetch the corresponding email
-            const { data: users, error: userError } = await supabase
-                .from('employees')
-                .select('email')
-                .eq('username', trimmedIdentifier);
+      if (!trimmedIdentifier.includes('@')) {
+        // It's a username, fetch the corresponding email
+        const { data: users, error: userError } = await supabase
+          .from('employees')
+          .select('email')
+          .eq('username', trimmedIdentifier);
 
-            if (userError) {
-                console.error('Error fetching user by username:', userError.message);
-                setLoginError('حدث خطأ أثناء التحقق من البيانات.');
-                return;
-            }
-
-            if (!users || users.length === 0) {
-                setLoginError('البيانات المدخلة غير صحيحة.');
-                return;
-            }
-            
-            // Take the first match in case of duplicates
-            emailToLogin = users[0].email;
-        } else {
-            // It's an email
-            emailToLogin = trimmedIdentifier;
+        if (userError) {
+          console.error('Error fetching user by username:', userError.message);
+          setLoginError('حدث خطأ أثناء التحقق من البيانات.');
+          return;
         }
 
-        const { error: signInError } = await supabase.auth.signInWithPassword({ 
-            email: emailToLogin, 
-            password 
-        });
-        
-        if (signInError) {
-             setLoginError('البيانات المدخلة غير صحيحة.');
+        if (!users || users.length === 0) {
+          setLoginError('البيانات المدخلة غير صحيحة.');
+          return;
         }
+
+        // Take the first match in case of duplicates
+        emailToLogin = users[0].email;
+      } else {
+        // It's an email
+        emailToLogin = trimmedIdentifier;
+      }
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: emailToLogin,
+        password
+      });
+
+      if (signInError) {
+        setLoginError('البيانات المدخلة غير صحيحة.');
+      }
     } catch (error) {
-        console.error("Login error:", error);
-        setLoginError('حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.');
+      console.error("Login error:", error);
+      setLoginError('حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.');
     }
   };
 
@@ -192,72 +193,72 @@ const App: React.FC = () => {
 
   const handleSaveEmployee = async (data: Omit<Employee, 'id' | 'avatar_url'> & { password?: string }, id?: string) => {
     if (id) {
-        // UPDATE existing employee. Password changes are not handled here.
-        const { password, ...profileData } = data;
-        const { error } = await supabase.from('employees').update(profileData).eq('id', id);
-        if (error) {
-            console.error("Error updating employee", error);
-        } else {
-            fetchAllData(currentUser.id);
-        }
+      // UPDATE existing employee. Password changes are not handled here.
+      const { password, ...profileData } = data;
+      const { error } = await supabase.from('employees').update(profileData).eq('id', id);
+      if (error) {
+        console.error("Error updating employee", error);
+      } else {
+        fetchAllData(currentUser.id);
+      }
     } else { // CREATE new employee
-        if (!data.password) {
-            console.error("Password is required for new employees.");
-            return;
+      if (!data.password) {
+        console.error("Password is required for new employees.");
+        return;
+      }
+
+      // IMPORTANT: For this to work without sending a confirmation email,
+      // you must disable "Confirm email" in your Supabase project's Auth settings.
+
+      // 1. Preserve the admin's current session
+      const { data: { session: adminSession } } = await supabase.auth.getSession();
+      if (!adminSession) {
+        console.error("Admin not logged in. Cannot create user.");
+        return;
+      }
+
+      // 2. Create the new user. This will temporarily change the auth state.
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            full_name: data.name,
+            avatar_url: `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(data.name)}`
+          }
         }
+      });
 
-        // IMPORTANT: For this to work without sending a confirmation email,
-        // you must disable "Confirm email" in your Supabase project's Auth settings.
-
-        // 1. Preserve the admin's current session
-        const { data: { session: adminSession } } = await supabase.auth.getSession();
-        if (!adminSession) {
-            console.error("Admin not logged in. Cannot create user.");
-            return;
-        }
-
-        // 2. Create the new user. This will temporarily change the auth state.
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-            email: data.email,
-            password: data.password,
-            options: {
-                data: {
-                    full_name: data.name,
-                    avatar_url: `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(data.name)}`
-                }
-            }
-        });
-
-        if (authError || !authData.user) {
-            console.error("Error creating auth user:", authError);
-            // Restore admin session on failure
-            await supabase.auth.setSession(adminSession);
-            return;
-        }
-
-        // 3. The DB trigger has created a basic profile. Now update it with the correct role and username.
-        // The client is now technically authenticated as the new user for this operation.
-        const { error: profileError } = await supabase
-            .from('employees')
-            .update({
-                name: data.name,
-                username: data.username,
-                role: data.role,
-                avatar_url: `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(data.name)}`
-            })
-            .eq('id', authData.user.id);
-
-        if (profileError) {
-            console.error("Error updating employee profile:", profileError);
-        }
-
-        // 4. Sign out the new user and restore the admin's session.
-        await supabase.auth.signOut();
+      if (authError || !authData.user) {
+        console.error("Error creating auth user:", authError);
+        // Restore admin session on failure
         await supabase.auth.setSession(adminSession);
-        
-        // The onAuthStateChange listener will handle fetching the updated data with the restored admin session.
+        return;
+      }
+
+      // 3. The DB trigger has created a basic profile. Now update it with the correct role and username.
+      // The client is now technically authenticated as the new user for this operation.
+      const { error: profileError } = await supabase
+        .from('employees')
+        .update({
+          name: data.name,
+          username: data.username,
+          role: data.role,
+          avatar_url: `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(data.name)}`
+        })
+        .eq('id', authData.user.id);
+
+      if (profileError) {
+        console.error("Error updating employee profile:", profileError);
+      }
+
+      // 4. Sign out the new user and restore the admin's session.
+      await supabase.auth.signOut();
+      await supabase.auth.setSession(adminSession);
+
+      // The onAuthStateChange listener will handle fetching the updated data with the restored admin session.
     }
-};
+  };
 
   const handleDeleteEmployee = async (id: string) => {
     // Note: This only deletes the profile record, not the auth user.
@@ -269,37 +270,37 @@ const App: React.FC = () => {
 
   const handleSaveTask = async (data: Omit<Task, 'id'>, id?: number) => {
     const payload: Partial<Task> = {
-        ...data,
-        due_time: data.due_time || null,
+      ...data,
+      due_time: data.due_time || null,
     };
 
     if (id) { // This is an update
-        const existingTask = tasks.find(t => t.id === id);
-        if (existingTask) {
-            // Task is moving to 'inprogress' for the first time
-            if (payload.status === 'inprogress' && !existingTask.started_at) {
-                payload.started_at = new Date().toISOString();
-            }
-            // Task is being completed
-            if (payload.status === 'done' && existingTask.status !== 'done') {
-                payload.completed_at = new Date().toISOString();
-            }
+      const existingTask = tasks.find(t => t.id === id);
+      if (existingTask) {
+        // Task is moving to 'inprogress' for the first time
+        if (payload.status === 'inprogress' && !existingTask.started_at) {
+          payload.started_at = new Date().toISOString();
         }
+        // Task is being completed
+        if (payload.status === 'done' && existingTask.status !== 'done') {
+          payload.completed_at = new Date().toISOString();
+        }
+      }
     }
 
     const { error } = await supabase.from('tasks').upsert({ id, ...payload });
     if (error) {
-        console.error("Error saving task:", error);
+      console.error("Error saving task:", error);
     } else {
-        const isNewTaskAssignment = !id && data.employee_id;
-        if (isNewTaskAssignment) {
-            try {
-                const assignedEmployee = employees.find(e => e.id === data.employee_id);
-                const linkedProject = projects.find(p => p.id === data.project_id);
+      const isNewTaskAssignment = !id && data.employee_id;
+      if (isNewTaskAssignment) {
+        try {
+          const assignedEmployee = employees.find(e => e.id === data.employee_id);
+          const linkedProject = projects.find(p => p.id === data.project_id);
 
-                if (assignedEmployee) {
-                    const subject = `تذكير ببدء مهمة: ${data.description}`;
-                    const emailHtmlBody = `<div dir="rtl" style="font-family: Cairo, sans-serif; text-align: right; color: #333;">
+          if (assignedEmployee) {
+            const subject = `تذكير ببدء مهمة: ${data.description}`;
+            const emailHtmlBody = `<div dir="rtl" style="font-family: Cairo, sans-serif; text-align: right; color: #333;">
                         <h3 style="font-family: Cairo, sans-serif;">تذكير ببدء مهمة 👋</h3>
                         <p style="font-family: Cairo, sans-serif;">مرحباً ${assignedEmployee.name.split(' ')[0]}،</p>
                         <p style="font-family: Cairo, sans-serif;">لقد تم إسناد مهمة جديدة إليك. يرجى البدء في العمل عليها وتغيير حالتها إلى "جاري العمل" ليعرف الفريق تقدمك.</p>
@@ -316,28 +317,28 @@ const App: React.FC = () => {
                         <br>
                         <p style="font-family: Cairo, sans-serif;">شكراً لك،<br>إدارة الفريق</p>
                     </div>`;
-                    
-                    const emailPayload = {
-                        to: assignedEmployee.email,
-                        subject: subject,
-                        html: emailHtmlBody
-                    };
 
-                    const { error: functionError } = await supabase.functions.invoke('send-email', {
-                        body: emailPayload,
-                    });
+            const emailPayload = {
+              to: assignedEmployee.email,
+              subject: subject,
+              html: emailHtmlBody
+            };
 
-                    if (functionError) {
-                        console.error('Error sending task notification email:', functionError.message);
-                    }
-                }
-            } catch (e) {
-                console.error('Failed to invoke email function:', e);
+            const { error: functionError } = await supabase.functions.invoke('send-email', {
+              body: emailPayload,
+            });
+
+            if (functionError) {
+              console.error('Error sending task notification email:', functionError.message);
             }
+          }
+        } catch (e) {
+          console.error('Failed to invoke email function:', e);
         }
-        await fetchAllData(currentUser.id);
+      }
+      await fetchAllData(currentUser.id);
     }
-};
+  };
 
   const handleDeleteTask = async (id: number) => {
     const { error } = await supabase.from('tasks').delete().eq('id', id);
@@ -357,7 +358,7 @@ const App: React.FC = () => {
     await supabase.from('projects').delete().eq('id', id);
     fetchAllData(currentUser.id);
   };
-  
+
   const handleSaveProfile = async (data: Omit<User, 'id' | 'avatar_url' | 'role'>) => {
     const { error } = await supabase.from('employees').update(data).eq('id', currentUser.id);
     if (error) console.error("Error saving profile", error);
@@ -394,14 +395,15 @@ const App: React.FC = () => {
   if (loading) {
     return <div className="flex h-screen items-center justify-center text-white">Loading...</div>;
   }
-  
+
   if (publicProject) {
     return <PublicTaskView project={publicProject} tasks={tasks} employees={employees} />;
   }
 
-  if (!session) {
-    return <LoginPage onLogin={handleLogin} loginError={loginError} />;
-  }
+  // 🔥 تم تعطيل صفحة تسجيل الدخول - الدخول المباشر مفعّل
+  // if (!session) {
+  //   return <LoginPage onLogin={handleLogin} loginError={loginError} />;
+  // }
 
   const renderView = () => {
     switch (currentView) {
@@ -412,11 +414,12 @@ const App: React.FC = () => {
       case 'calendar': return <CalendarView tasks={tasks} onSaveTask={handleSaveTask} projects={projects} employees={employees} currentUser={currentUser} onDeleteTask={handleDeleteTask} />;
       case 'reports': return <ReportsView tasks={tasks} employees={employees} projects={projects} currentUser={currentUser} />;
       case 'systemReport': return <SystemReportView />;
-      case 'settings': 
-        return hasPermission(currentUser, 'manageSettings') 
-          ? <SettingsView /> 
+      case 'settings':
+        return hasPermission(currentUser, 'manageSettings')
+          ? <SettingsView />
           : <DashboardView projects={projects} tasks={tasks} employees={employees} setCurrentView={setCurrentView} />;
       case 'profile': return <ProfileView currentUser={currentUser} onSave={handleSaveProfile} onUpdateAvatar={handleUpdateAvatar} />;
+      case 'associations': return <AssociationsView />;
       default: return <DashboardView projects={projects} tasks={tasks} employees={employees} setCurrentView={setCurrentView} />;
     }
   };

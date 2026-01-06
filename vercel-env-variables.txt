@@ -1,0 +1,22 @@
+# ========================================
+# متغيرات البيئة لـ Vercel - Environment Variables
+# ========================================
+
+# متغيرات Supabase الأساسية
+NEXT_PUBLIC_SUPABASE_URL=https://spoceoewsaygajjoviip.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_yn10ajMhBgi2cOnX2x6kfA_KZFYYJLa
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNwb2Nlb2V3c2F5Z2Fqam92aWlwIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzI3MjM4MiwiZXhwIjoyMDgyODQ4MzgyfQ.zCZCPNPr3Zwlbg3V3VsmnxieNsXTS2gTTv_2DXEQtBU
+
+# متغيرات قاعدة البيانات PostgreSQL
+POSTGRES_URL=postgresql://postgres:[YOUR-PASSWORD]@db.spoceoewsaygajjoviip.supabase.co:5432/postgres
+POSTGRES_HOST=db.spoceoewsaygajjoviip.supabase.co
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=[YOUR-PASSWORD]
+POSTGRES_DATABASE=postgres
+
+# متغيرات JWT
+SUPABASE_JWT_SECRET=nJ6wDUNn0otAkL86hfudDGBZfgEw0jEPIT5tiiz7qzva5ZIG4x/GrGn484Zkhktcgz5CAFwMDcUgcGeZIwttCQ==
+
+# متغيرات إضافية (اختيارية)
+NEXT_PUBLIC_APP_URL=https://your-app-name.vercel.app
+NODE_ENV=production
