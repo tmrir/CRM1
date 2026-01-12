@@ -23,6 +23,7 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
     const [filterStatus, setFilterStatus] = useState<AssociationStatus | 'all'>('all');
     const [filterCity, setFilterCity] = useState('');
     const [filterRegion, setFilterRegion] = useState('');
+    const [filterCategory, setFilterCategory] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
 
     // Selection State
@@ -92,7 +93,8 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
             a.city.toLowerCase().includes(searchTerm.toLowerCase()) ||
             assocRegion.toLowerCase().includes(searchTerm.toLowerCase());
         const matchRegion = !selectedRegion || assocRegion === selectedRegion;
-        return matchStatus && matchSearch && matchRegion;
+        const matchCategory = !filterCategory || a.sub_category === filterCategory;
+        return matchStatus && matchSearch && matchRegion && matchCategory;
     });
 
     // Get unique regions for dropdown
@@ -110,6 +112,11 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
     // Get unique categories for dropdown
     const uniqueCategories = [...new Set(
         associations.map(a => a.main_category).filter(Boolean)
+    )].sort();
+
+    // Get unique subcategories for dropdown
+    const uniqueSubCategories = [...new Set(
+        associations.map(a => a.sub_category).filter(Boolean)
     )].sort();
 
     // Statistics
@@ -477,6 +484,17 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
                             <option value="">جميع المناطق</option>
                             {uniqueRegions.map(region => (
                                 <option key={region} value={region}>{region}</option>
+                            ))}
+                        </select>
+                        {/* Category Filter */}
+                        <select
+                            value={filterCategory}
+                            onChange={(e) => setFilterCategory(e.target.value)}
+                            className="px-4 py-2 bg-slate-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 w-full sm:w-auto"
+                        >
+                            <option value="">جميع التصنيفات</option>
+                            {uniqueSubCategories.map(category => (
+                                <option key={category} value={category}>{category}</option>
                             ))}
                         </select>
                         <input

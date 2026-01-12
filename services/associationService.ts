@@ -128,6 +128,7 @@ export const searchAssociations = async (filters: {
   searchTerm?: string;
   status?: string;
   region?: string;
+  category?: string;
 }): Promise<Association[]> => {
   try {
     let query = supabase
@@ -142,6 +143,10 @@ export const searchAssociations = async (filters: {
 
     if (filters.region) {
       query = query.eq('region', filters.region);
+    }
+
+    if (filters.category) {
+      query = query.eq('sub_category', filters.category);
     }
 
     if (filters.searchTerm) {
