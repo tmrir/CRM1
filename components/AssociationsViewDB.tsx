@@ -128,33 +128,117 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
         responseRate: associations.filter(a => a.status === 'response_rate').length
     };
 
+    // 🔥 INTELLIGENT DATA PARSER
+    const parseAssociationData = (input: string): Partial<Association> | null => {
+        const parts = input.split(',').map(p => p.trim()).filter(p => p);
+        if (parts.length < 2) return null;
+
+        const result: Partial<Association> = {
+            main_category: 'خيرية',
+            sub_category: 'اجتماعية',
+            target_audience: 'عام',
+            response_status: 'جديد',
+            status: 'new',
+            trust_score: 0,
+            region: 'المنطقة الوسطى'
+        };
+
+        // Define patterns for different field types
+        const phonePattern = /^0[1-9]\d{8}$/;
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const urlPattern = /^https?:\/\/.+/;
+        
+        // Saudi cities and regions mapping
+        const saudiCities = {
+            'الرياض': 'المنطقة الوسطى', 'مكة': 'المنطقة الغربية', 'جدة': 'المنطقة الغربية',
+            'المدينة': 'المنطقة الغربية', 'الدمام': 'المنطقة الشرقية', 'الخبر': 'المنطقة الشرقية',
+            'الظهران': 'المنطقة الشرقية', 'أبها': 'منطقة عسير', 'خميس مشيط': 'منطقة عسير',
+            'تبوك': 'منطقة تبوك', 'حائل': 'منطقة حائل', 'بريدة': 'منطقة القصيم',
+            'عنيزة': 'منطقة القصيم', 'جازان': 'منطقة جازان', 'نجران': 'منطقة نجران',
+            'الباحة': 'منطقة الباحة', 'الجوف': 'منطقة الجوف', 'عرعر': 'منطقة الحدود الشمالية'
+        };
+
+        // Categories mapping
+        const categories = {
+            'أيتام': 'أيتام', 'أطفال': 'أطفال', 'طفولة': 'أطفال', 'معاقين': 'معاقين', 'ذوي الاحتياجات': 'معاقين',
+            'تعليم': 'تعليم', 'مدارس': 'تعليم', 'طلاب': 'تعليم', 'صحة': 'صحة', 'طبية': 'صحة',
+            'مستشفى': 'صحة', 'علاج': 'صحة', 'كبار': 'كبار السن', 'مسنين': 'كبار السن',
+            'إغاثة': 'طوارئ', 'طوارئ': 'طوارئ', 'إسعاف': 'طوارئ', 'مرأة': 'مرأة', 'نساء': 'مرأة',
+            'سيدات': 'مرأة', 'شباب': 'شباب', 'شبابية': 'شباب', 'اجتماعي': 'اجتماعية', 'خيري': 'اجتماعية'
+        };
+
+        for (const part of parts) {
+            // Check if it's a phone number
+            if (phonePattern.test(part.replace(/[\s-]/g, ''))) {
+                result.phone = part.replace(/[\s-]/g, '');
+                result.contact = result.phone;
+            }
+            // Check if it's an email
+            else if (emailPattern.test(part)) {
+                result.email = part;
+            }
+            // Check if it's a URL
+            else if (urlPattern.test(part)) {
+                if (part.includes('donate') || part.includes('تبرع')) {
+                    result.donation_link = part;
+                } else {
+                    result.website = part;
+                }
+            }
+            // Check if it's a city and set region
+            else if (saudiCities[part]) {
+                result.city = part;
+                result.region = saudiCities[part];
+            }
+            // Check if it's a category
+            else if (categories[part]) {
+                result.sub_category = categories[part];
+            }
+            // Check for response status
+            else if (['جديد', 'تم التواصل', 'لم يتم التواصل', 'استجابة'].includes(part)) {
+                if (part === 'جديد') result.status = 'new';
+                else if (part === 'تم التواصل') result.status = 'contacted';
+                else if (part === 'لم يتم التواصل') result.status = 'not_contacted';
+                else if (part === 'استجابة') result.status = 'response_rate';
+            }
+            // Check for response rate
+            else if (part.includes('%') || /^\d+$/.test(part)) {
+                const rate = parseInt(part.replace('%', ''));
+                if (rate >= 0 && rate <= 100) {
+                    result.response_rate = rate;
+                    result.status = 'response_rate';
+                }
+            }
+            // Otherwise, treat as name
+            else if (!result.name && part.length > 2) {
+                result.name = part;
+            }
+        }
+
+        // Validate required fields
+        if (!result.name || !result.phone || !result.city) {
+            return null;
+        }
+
+        return result;
+    };
+
     // 🔥 QUICK ADD SINGLE
     const handleQuickAddSingle = () => {
         if (!quickAddText.trim()) return;
         
-        const parts = quickAddText.split(',').map(p => p.trim());
-        if (parts.length < 3) {
-            showNotification('⚠️ الرجاء إدخال: الاسم، الجوال، المدينة');
+        const parsedData = parseAssociationData(quickAddText);
+        if (!parsedData) {
+            showNotification('⚠️ لم يتم التعرف على البيانات. الرجاء التأكد من وجود اسم وجوال ومدينة');
             return;
         }
 
-        const [name, phone, city] = parts;
         const newAssociation: Omit<Association, 'id' | 'created_at' | 'updated_at'> = {
-            name,
-            phone,
-            city,
-            region: 'المنطقة الوسطى', // Default region
-            main_category: 'خيرية',
-            sub_category: 'اجتماعية',
-            donation_link: '',
-            target_audience: 'عام',
-            response_status: 'جديد',
-            contact: phone, // Copy phone number to contact
-            email: '',
-            website: '',
+            ...parsedData,
             status: targetStatus,
-            trust_score: 0
-        };
+            response_status: 'جديد'
+        } as Omit<Association, 'id' | 'created_at' | 'updated_at'>;
+
         createAssociation(newAssociation);
         setQuickAddText('');
         showNotification('✅ تمت إضافة الجمعية بنجاح');
@@ -169,36 +253,38 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
 
         const lines = quickAddText.trim().split('\n');
         const newAssociations: Omit<Association, 'id' | 'created_at' | 'updated_at'>[] = [];
+        let successCount = 0;
+        let errorCount = 0;
 
         for (const line of lines) {
-            const parts = line.split(',').map(p => p.trim());
-            if (parts.length >= 3) {
-                const [name, phone, city] = parts;
+            const parsedData = parseAssociationData(line);
+            if (parsedData) {
                 newAssociations.push({
-                    name,
-                    phone,
-                    city,
-                    region: 'المنطقة الوسطى', // Default region
-                    main_category: 'خيرية',
-                    sub_category: 'اجتماعية',
-                    donation_link: '',
-                    target_audience: 'عام',
-                    response_status: 'جديد',
-                    contact: phone, // Copy phone number to contact
-                    email: '',
-                    website: '',
+                    ...parsedData,
                     status: targetStatus,
-                    trust_score: 0
-                });
+                    response_status: 'جديد'
+                } as Omit<Association, 'id' | 'created_at' | 'updated_at'>);
+                successCount++;
+            } else {
+                errorCount++;
             }
         }
 
-        if (newAssociations.length > 0) {
-            await importAssociations(newAssociations);
+        if (newAssociations.length === 0) {
+            showNotification('❌ لم يتم التعرف على أي بيانات صالحة');
+            return;
+        }
+
+        try {
+            // Create associations one by one
+            for (const association of newAssociations) {
+                await createAssociation(association);
+            }
             setQuickAddText('');
-            showNotification(`✅ تم إضافة ${newAssociations.length} جمعية بنجاح`);
-        } else {
-            showNotification('⚠️ لم يتم التعرف على أي بيانات صالحة');
+            setIsQuickAddOpen(false);
+            showNotification(`✅ تم إضافة ${successCount} جمعية بنجاح${errorCount > 0 ? ` (${errorCount} تم تجاهلها)` : ''}`);
+        } catch (error) {
+            showNotification('❌ حدث خطأ أثناء إضافة الجمعيات');
         }
     };
 
@@ -506,61 +592,34 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
                         />
                     </div>
                 </div>
-
                 {/* Quick Add Section */}
                 {isQuickAddOpen && (
                     <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 border border-slate-600">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-bold text-white">إضافة جمعيات جديدة</h3>
+                            <h3 className="text-xl font-bold text-white">إضافة جمعيات (ذكية)</h3>
                             <button onClick={() => setIsQuickAddOpen(false)} className="text-slate-400 hover:text-white text-2xl">×</button>
                         </div>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                             <div>
-                                <h4 className="text-lg font-semibold text-white mb-2">إضافة سريعة</h4>
-                                <input
-                                    type="text"
-                                    placeholder="الاسم، الجوال، المدينة (مفصولة بفواصل)"
-                                    value={quickAddText}
-                                    onChange={(e) => setQuickAddText(e.target.value)}
-                                    className="w-full px-4 py-3 bg-slate-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                                />
-                                <div className="flex gap-2 mt-2">
-                                    <select
-                                        value={targetStatus}
-                                        onChange={(e) => setTargetStatus(e.target.value as AssociationStatus)}
-                                        className="px-4 py-2 bg-slate-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                                    >
-                                        <option value="new">جديد</option>
-                                        <option value="contacted">تم التواصل</option>
-                                        <option value="not_contacted">لم يتم التواصل</option>
-                                        <option value="response_rate">معدل الاستجابة</option>
-                                    </select>
-                                    <button
-                                        onClick={handleQuickAddSingle}
-                                        className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors"
-                                    >
-                                        ➕ إضافة واحدة
-                                    </button>
-                                </div>
-                            </div>
-                            <div>
-                                <h4 className="text-lg font-semibold text-white mb-2">إضافة متعددة</h4>
+                                <h4 className="text-lg font-semibold text-white mb-2">أدخل البيانات (بأي ترتيب)</h4>
                                 <textarea
-                                    placeholder="الاسم، الجوال، المدينة (سطر لكل جمعية)"
+                                    placeholder="مثال:&#10;جمعية الأطفال, 0123456789, الرياض, أطفال, تم التواصل&#10;أو:&#10;0132345678, جمعية البر, جدة, إغاثة, 80%&#10;أو:&#10;https://charity.org, جمعية المساعدة, مكة, صحة, info@charity.org"
                                     value={quickAddText}
                                     onChange={(e) => setQuickAddText(e.target.value)}
                                     className="w-full h-32 px-4 py-3 bg-slate-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none"
                                 />
+                                <div className="mt-2 text-xs text-slate-400">
+                                    💡 النظام يتعرف تلقائياً على: الاسم، الجوال، المدينة، التصنيف، الحالة، الإيميل، الموقع، نسبة الاستجابة
+                                </div>
                                 <div className="flex gap-2 mt-2">
                                     <select
                                         value={targetStatus}
                                         onChange={(e) => setTargetStatus(e.target.value as AssociationStatus)}
-                                        className="px-4 py-2 bg-slate-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                        className="px-3 py-2 bg-slate-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
                                     >
                                         <option value="new">جديد</option>
                                         <option value="contacted">تم التواصل</option>
                                         <option value="not_contacted">لم يتم التواصل</option>
-                                        <option value="response_rate">معدل الاستجابة</option>
                                     </select>
                                     <button
                                         onClick={handleQuickAdd}
@@ -568,6 +627,31 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
                                     >
                                         📥 إضافة متعددة
                                     </button>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 className="text-lg font-semibold text-white mb-2">أمثلة المدخلات:</h4>
+                                <div className="space-y-2 text-sm text-slate-300">
+                                    <div className="bg-slate-700 p-2 rounded">
+                                        <strong>أساسي:</strong><br/>
+                                        جمعية البر, 0123456789, الرياض
+                                    </div>
+                                    <div className="bg-slate-700 p-2 rounded">
+                                        <strong>مع تصنيف:</strong><br/>
+                                        جمعية الأيتام, 0132345678, جدة, أيتام
+                                    </div>
+                                    <div className="bg-slate-700 p-2 rounded">
+                                        <strong>مع حالة:</strong><br/>
+                                        جمعية الإغاثة, 0143456789, الدمام, إغاثة, تم التواصل
+                                    </div>
+                                    <div className="bg-slate-700 p-2 rounded">
+                                        <strong>مع نسبة استجابة:</strong><br/>
+                                        جمعية التعليم, 0156789012, تبوك, تعليم, 75%
+                                    </div>
+                                    <div className="bg-slate-700 p-2 rounded">
+                                        <strong>مع إيميل وموقع:</strong><br/>
+                                        جمعية المرأة, 0168901234, الرياض, مرأة, info@women.org, https://women.org
+                                    </div>
                                 </div>
                             </div>
                         </div>
