@@ -17,7 +17,7 @@ import ProfileView from './components/ProfileView';
 import CalendarView from './components/CalendarView';
 import SystemReportView from './components/SystemReportView';
 import PublicTaskView from './components/PublicTaskView';
-import AssociationsView from './components/AssociationsView';
+import AssociationsView from './components/AssociationsViewDB';
 import { sendNotification, hasPermission } from './utils/exportHelpers';
 
 type View = 'dashboard' | 'projects' | 'tasks' | 'team' | 'calendar' | 'reports' | 'systemReport' | 'settings' | 'profile' | 'associations';
