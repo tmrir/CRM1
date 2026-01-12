@@ -132,7 +132,13 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
     const parseAssociationData = (input: string): Partial<Association> | null => {
         // Support both comma and tab separators
         const parts = input.split(/[\t,]/).map(p => p.trim()).filter(p => p);
-        if (parts.length < 2) return null;
+        console.log('Parser Input:', input);
+        console.log('Parsed Parts:', parts);
+        
+        if (parts.length < 2) {
+            console.log('Not enough parts, returning null');
+            return null;
+        }
 
         const result: Partial<Association> = {
             main_category: 'خيرية',
@@ -183,35 +189,44 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
         };
 
         for (const part of parts) {
+            console.log('Processing part:', part);
+            
             // Check if it's a phone number
             if (phonePattern.test(part.replace(/[\s-]/g, ''))) {
                 result.phone = part.replace(/[\s-]/g, '');
                 result.contact = result.phone;
+                console.log('Found phone:', result.phone);
             }
             // Check if it's an email
             else if (emailPattern.test(part)) {
                 result.email = part;
+                console.log('Found email:', result.email);
             }
             // Check if it's a URL
             else if (urlPattern.test(part)) {
                 if (part.includes('donate') || part.includes('تبرع') || part.includes('اضغط هنا')) {
                     result.donation_link = part;
+                    console.log('Found donation link:', result.donation_link);
                 } else {
                     result.website = part;
+                    console.log('Found website:', result.website);
                 }
             }
             // Check if it's a city and set region
             else if (saudiCities[part]) {
                 result.city = part;
                 result.region = saudiCities[part];
+                console.log('Found city:', result.city, 'Region:', result.region);
             }
             // Check if it's a category
             else if (categories[part]) {
                 result.sub_category = categories[part];
+                console.log('Found category:', result.sub_category);
             }
             // Check if it's a target audience
             else if (targetAudiences[part]) {
                 result.target_audience = targetAudiences[part];
+                console.log('Found target audience:', result.target_audience);
             }
             // Check for response status
             else if (['جديد', 'تم التواصل', 'لم يتم التواصل', 'استجابة'].includes(part)) {
@@ -219,6 +234,7 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
                 else if (part === 'تم التواصل') result.status = 'contacted';
                 else if (part === 'لم يتم التواصل') result.status = 'not_contacted';
                 else if (part === 'استجابة') result.status = 'response_rate';
+                console.log('Found status:', result.status);
             }
             // Check for response rate
             else if (part.includes('%') || /^\d+$/.test(part)) {
@@ -226,16 +242,26 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
                 if (rate >= 0 && rate <= 100) {
                     result.response_rate = rate;
                     result.status = 'response_rate';
+                    console.log('Found response rate:', result.response_rate);
                 }
             }
             // Otherwise, treat as name
             else if (!result.name && part.length > 2) {
                 result.name = part;
+                console.log('Found name:', result.name);
             }
         }
 
+        console.log('Final result:', result);
+
         // Validate required fields
         if (!result.name || !result.phone || !result.city) {
+            console.log('Validation failed - missing required fields');
+            console.log('Missing:', {
+                name: !result.name,
+                phone: !result.phone,
+                city: !result.city
+            });
             return null;
         }
 
