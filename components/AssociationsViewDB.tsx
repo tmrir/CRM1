@@ -177,7 +177,7 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
             'ضرية': 'منطقة القصيم', 'البدائع': 'منطقة القصيم', 'رياض الخبراء': 'منطقة تبوك',
             'مركز فضلا': 'منطقة القصيم', 'الرس': 'منطقة المدينة', 'خيبر': 'منطقة المدينة',
             'ينبع': 'منطقة المدينة', 'العيص': 'منطقة مكة المكرمة', 'أحد المسارحة': 'منطقة مكة المكرمة',
-            'العارضة': 'منطقة جازان'
+            'العارضة': 'منطقة جازان', 'عفيف': 'منطقة عسير'
         };
 
         // Categories mapping - expanded
@@ -321,7 +321,7 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
             'الرياض', 'مكة', 'جدة', 'المدينة', 'الدمام', 'الخبر', 'الظهران', 'أبها', 'خميس مشيط',
             'تبوك', 'حائل', 'بريدة', 'عنيزة', 'جازان', 'نجران', 'الباحة', 'الجوف', 'عرعر',
             'أملج', 'الخبراء', 'إمباري', 'ضرية', 'البدائع', 'رياض الخبراء', 'مركز فضلا',
-            'الرس', 'خيبر', 'ينبع', 'العيص', 'أحد المسارحة', 'العارضة'
+            'الرس', 'خيبر', 'ينبع', 'العيص', 'أحد المسارحة', 'العارضة', 'عفيف'
         ];
         
         for (const city of cities) {
@@ -375,7 +375,47 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
             return;
         }
 
-        const lines = quickAddText.trim().split('\n');
+        let lines: string[] = [];
+        
+        // Check if it's continuous text with multiple associations
+        if (!quickAddText.includes('\n') && !quickAddText.includes(',') && !quickAddText.includes('\t')) {
+            // Split by phone numbers for continuous text
+            const phoneNumbers = quickAddText.match(/0[1-9]\d{8}/g);
+            if (phoneNumbers && phoneNumbers.length > 1) {
+                // Split text by phone numbers
+                let remainingText = quickAddText;
+                lines = [];
+                
+                for (let i = 0; i < phoneNumbers.length; i++) {
+                    const phone = phoneNumbers[i];
+                    const phoneIndex = remainingText.indexOf(phone);
+                    
+                    if (phoneIndex > 0) {
+                        // Get text before this phone (for the first association)
+                        if (i === 0) {
+                            lines.push(remainingText.substring(0, phoneIndex + phone.length));
+                        } else {
+                            lines.push(phone);
+                        }
+                        
+                        // Remove this part from remaining text
+                        remainingText = remainingText.substring(phoneIndex + phone.length);
+                    }
+                }
+                
+                // Add any remaining text
+                if (remainingText.trim()) {
+                    lines.push(remainingText.trim());
+                }
+            } else {
+                // Single association in continuous text
+                lines = [quickAddText];
+            }
+        } else {
+            // Normal line-by-line processing
+            lines = quickAddText.trim().split('\n');
+        }
+
         const newAssociations: Omit<Association, 'id' | 'created_at' | 'updated_at'>[] = [];
         let successCount = 0;
         let errorCount = 0;
@@ -408,6 +448,7 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
             setIsQuickAddOpen(false);
             showNotification(`✅ تم إضافة ${successCount} جمعية بنجاح${errorCount > 0 ? ` (${errorCount} تم تجاهلها)` : ''}`);
         } catch (error) {
+            console.error('Error adding associations:', error);
             showNotification('❌ حدث خطأ أثناء إضافة الجمعيات');
         }
     };
