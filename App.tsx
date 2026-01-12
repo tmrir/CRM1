@@ -400,10 +400,10 @@ const App: React.FC = () => {
     return <PublicTaskView project={publicProject} tasks={tasks} employees={employees} />;
   }
 
-  // 🔥 تم تعطيل صفحة تسجيل الدخول - الدخول المباشر مفعّل
-  // if (!session) {
-  //   return <LoginPage onLogin={handleLogin} loginError={loginError} />;
-  // }
+  // 🔥 تفعيل صفحة تسجيل الدخول
+  if (!session) {
+    return <LoginPage onLogin={handleLogin} loginError={loginError} />;
+  }
 
   const renderView = () => {
     switch (currentView) {
