@@ -344,6 +344,24 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
             }
         }
         
+        // Try to extract category and target audience from remaining text
+        const remainingText = text.replace(/0[1-9]\d{8}/g, '').replace(/^[^]*0[1-9]\d{8}/, '');
+        
+        // Extract categories
+        const categories = [
+            'الخدمات الاجتماعية', 'خدمات الفئات الاجتماعية', 'التنمية والإسكان', 
+            'التنمية الاجتماعية والاقتصادية', 'منظمات دعم العمل الخيري', 'المنظمات الوسيطة',
+            'الثقافة والترفيه', 'الرياضة', 'الصحة', 'الخدمات الصحية الأخرى',
+            'العمل والتدريب', 'التدريب', 'التكافل الاجتماعي والبرامج'
+        ];
+        
+        for (const category of categories) {
+            if (remainingText.includes(category)) {
+                parts.push(category);
+                break; // Only add one category
+            }
+        }
+        
         return parts;
     };
 
@@ -382,30 +400,32 @@ const AssociationsView: React.FC<AssociationsViewProps> = () => {
             // Split by phone numbers for continuous text
             const phoneNumbers = quickAddText.match(/0[1-9]\d{8}/g);
             if (phoneNumbers && phoneNumbers.length > 1) {
-                // Split text by phone numbers
-                let remainingText = quickAddText;
+                // Split text by phone numbers more intelligently
                 lines = [];
+                let remainingText = quickAddText;
                 
                 for (let i = 0; i < phoneNumbers.length; i++) {
                     const phone = phoneNumbers[i];
                     const phoneIndex = remainingText.indexOf(phone);
                     
-                    if (phoneIndex > 0) {
+                    if (phoneIndex >= 0) {
                         // Get text before this phone (for the first association)
                         if (i === 0) {
-                            lines.push(remainingText.substring(0, phoneIndex + phone.length));
+                            const beforePhone = remainingText.substring(0, phoneIndex + phone.length);
+                            lines.push(beforePhone);
                         } else {
-                            lines.push(phone);
+                            // Find text between previous phone and this phone
+                            const nextPhoneIndex = i < phoneNumbers.length - 1 
+                                ? remainingText.indexOf(phoneNumbers[i + 1]) 
+                                : remainingText.length;
+                            
+                            const associationText = phone + remainingText.substring(phone.length, nextPhoneIndex);
+                            lines.push(associationText);
                         }
                         
                         // Remove this part from remaining text
                         remainingText = remainingText.substring(phoneIndex + phone.length);
                     }
-                }
-                
-                // Add any remaining text
-                if (remainingText.trim()) {
-                    lines.push(remainingText.trim());
                 }
             } else {
                 // Single association in continuous text
