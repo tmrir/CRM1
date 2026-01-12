@@ -1,5 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import type { Association, AssociationStatus } from '../types';
+import React, { useState, useEffect } from 'react';
+import { 
+    fetchAssociations, 
+    createAssociation, 
+    updateMultipleAssociations, 
+    deleteMultipleAssociations,
+    importAssociations,
+    searchAssociations
+} from '../services/associationService';
+import { Association, AssociationStatus } from '../types';
 import Modal from './Modal';
 
 interface AssociationsViewProps {
@@ -241,26 +249,34 @@ const INITIAL_ASSOCIATIONS: Association[] = [
 ];
 
 const AssociationsView: React.FC<AssociationsViewProps> = () => {
-    // 🔥 DYNAMIC STATE with localStorage persistence
-    const [associations, setAssociations] = useState<Association[]>(() => {
-        // Load from localStorage on first render
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('crm_associations');
-            if (saved) {
-                try {
-                    return JSON.parse(saved);
-                } catch (e) {
-                    console.error('Failed to parse saved associations:', e);
-                }
-            }
-        }
-        // Return initial mock data if nothing saved
-        return INITIAL_ASSOCIATIONS;
-    });
-
-    // 🔥 AUTO-SAVE to localStorage whenever associations change
+    // 🔥 DYNAMIC STATE with database persistence
+    const [associations, setAssociations] = useState<Association[]>([]);
     useEffect(() => {
-        if (typeof window !== 'undefined') {
+        const loadAssociations = async () => {
+            try {
+                const data = await fetchAssociations();
+                setAssociations(data);
+            } catch (error) {
+                console.error('Error loading associations:', error);
+                showNotification('❌ خطأ في تحميل البيانات');
+            }
+        };
+
+        loadAssociations();
+    }, []);
+
+    // 🔥 AUTO-SAVE to database whenever associations change
+    useEffect(() => {
+        const saveAssociations = async () => {
+            try {
+                await saveAssociationsToDatabase(associations);
+            } catch (error) {
+                console.error('Error saving associations:', error);
+                showNotification('❌ خطأ في حفظ البيانات');
+            }
+        };
+
+        saveAssociations();
             localStorage.setItem('crm_associations', JSON.stringify(associations));
         }
     }, [associations]);

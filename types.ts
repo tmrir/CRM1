@@ -48,21 +48,22 @@ export interface Project {
 export type AssociationStatus = 'new' | 'contacted' | 'not_contacted' | 'response_rate';
 
 export interface Association {
-  id: number;
-  region: string;
+  id: string;
   name: string;
   phone: string;
   city: string;
-  mainCategory: string;
-  subCategory: string;
-  donationLink: string;
-  targetAudience: string;
-  responseStatus: string;
-  contact: string;
+  region: string;
+  main_category: string;
+  sub_category?: string;
+  donation_link?: string;
+  target_audience: string;
+  response_status: string;
+  contact?: string;
   email?: string;
   website?: string;
   status: AssociationStatus;
   response_rate?: number;
-  trust_score?: number;
-  created_at?: string;
+  trust_score: number;
+  created_at: string;
+  updated_at: string;
 }
